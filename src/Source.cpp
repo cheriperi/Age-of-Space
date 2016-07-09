@@ -18,6 +18,7 @@
 #include "Game.h"
 #include "Mouse.h"
 #include "Timer.h"
+#include "Coordinator.h"
 
 //variables y funciones globales
 #include "Global.h"
@@ -44,14 +45,15 @@ int main(int argc, char* args[])
 		}
 		else
 		{	
-
-	//		SDL_GL_SetSwapInterval(0);
+			//SDL_GL_SetSwapInterval(0);
 			//Main loop flag
 			bool quit = false;
 
 			//flag de pantalla de inicio
 			bool total = true;
 
+			//Random seed
+			srand(SDL_GetTicks());
 
 			//FPS
 			Timer fps_timer, cap_timer;
@@ -62,39 +64,36 @@ int main(int argc, char* args[])
 			SDL_Event e;
 
 			//Nombre del jugador
-			SDL_Color textColor = { 0, 0, 255};
+			/*SDL_Color textColor = { 0, 0, 255};
 			int tamaño = 28;
 			std::string inputText = "Jugador";
 			gInputTextTexture.loadText(inputText.c_str(), tamaño, textColor);
+			*/
 
 			//flag de cambio de tamaño de pantalla
 			bool size=false;
 
 			//game master
-			Game game;
+			//Game game;
+			Coordinator coordinador;
 
 			//inicializamos los elementos del juego
-			game.cargarTexturas();
-			game.InitViewPorts();
-			game.initjuego();
+			coordinador.initGame();
 
-			game.initMenu();
+
 
 			//While application is running
 			while( !quit )
 			{
-				//flag de cambio en el texto introducido
-				bool renderText = false;
-
 
 				//Límite FPS
 				cap_timer.start();
 
 				//Non queue events
-				game.main_event();
+				coordinador.mainEvent();
 
 				//Handle events on queue
-				while( SDL_PollEvent( &e ) != 0 )
+				while( SDL_PollEvent(&e) != 0 )
 				{
 					//User requests quit
 					if( e.type == SDL_QUIT )
@@ -102,34 +101,13 @@ int main(int argc, char* args[])
 						quit = true;
 					}
 
-					//Si estamos en pantalla de inicio
 
-					if(total) 
-					{
-									
-						//eventos del cambio de pantalla
-						size=gWindow.handleEvent( e );
+					if(coordinador.event(&e)) quit=true;
 
-						//vamos a la pantalla de juego al pulsar enter
-						if( e.type==SDL_KEYDOWN && e.key.keysym.sym==SDLK_RETURN) total=false;
-
-						//función de entrada de texto y actualización del nombre
-						renderText=textinput(&inputText, renderText, e);
-						game.setNombre(inputText);
-					}
-
-					//si estamos en la pantalla del juego
-					else
-					{
-
-						game.event(&e);
-
-						//Handle window events
-						size=gWindow.handleEvent( e );
-
-					}
+					size=gWindow.handleEvent( e );
 					
 				}
+				
 
 				//Only draw when not minimized
 				if( !gWindow.isMinimized() )
@@ -163,7 +141,8 @@ int main(int argc, char* args[])
 					if(size)
 					{
 						
-						game.ActViewPorts();
+					//	game.ActViewPorts();
+						coordinador.actViewports();
 
 						//ajustar el tamaño a la ventana.					
 						WindowQuad.x=gWindow.getWidth();
@@ -172,24 +151,7 @@ int main(int argc, char* args[])
 						size=false;
 					}
 
-					//Update screen		
-					if(total)
-					{
-						//pantalla de inicio
-						game.RenderTotal();
-
-						//textos del inicio
-						gTextTexture.render( gRenderer, 0.1*gWindow.getWidth(), 0.4*gWindow.getHeight());
-						Textrender(inputText, renderText, textColor, tamaño);
-						gInputTextTexture.render( gRenderer, 0.1*gWindow.getWidth(), 0.6*gWindow.getHeight() );
-					}
-					else
-					{
-							//renderizamos los viewports y los elementos del juego
-							game.RenderViewPorts();
-							//game.renderJuego();
-						
-					}
+					coordinador.render();
 
 					//actualizamos renderizado total
 					SDL_RenderPresent( gRenderer );
@@ -203,13 +165,14 @@ int main(int argc, char* args[])
 						SDL_Delay(SCREEN_TICKS_PER_FRAME - frameTicks);
 					}
 
-
 				}
+				
 			}
 		}
 	}
-	//system("PAUSE");
+
 	//Free resources and close SDL
 	close();
+	//system("PAUSE");
 	return 0;
 }

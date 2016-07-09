@@ -1,7 +1,7 @@
 #include "ObjetoMovil.h"
 
 
-ObjetoMovil::ObjetoMovil(bool selec):GameObject(selec)
+ObjetoMovil::ObjetoMovil(int t, bool selec):GameObject(t, selec)
 {
 	
 	//Vector2 por defecto 0,0;
@@ -12,8 +12,12 @@ ObjetoMovil::ObjetoMovil(bool selec):GameObject(selec)
 	//Destino nulo
 	dest.x = cen.x;
 	dest.y = cen.y;
+	following = 0;
+
 	//Velocidad máxima
 	max_vel = 2;
+	turn_rad = 20;
+
 	//Nave parada
 	vel.x = 0;
 	vel.y = 0;
@@ -21,7 +25,7 @@ ObjetoMovil::ObjetoMovil(bool selec):GameObject(selec)
 	sel = false;
 	sel_angle = 0;
 
-	tex=NULL;
+	tex = NULL;
 }
 
 
@@ -31,6 +35,7 @@ ObjetoMovil::~ObjetoMovil()
 
 int ObjetoMovil::event(SDL_Event* e, SDL_Rect m_sel, SDL_Point m)
 {
+	
 	//Selección múltiple
 	if (e->button.button == SDL_BUTTON_LEFT)
 	{
@@ -46,7 +51,7 @@ int ObjetoMovil::event(SDL_Event* e, SDL_Rect m_sel, SDL_Point m)
 	}
 
 
-	//Botón derecho
+	//Botón derecho (movimiento)
 	if ((e->type == SDL_MOUSEBUTTONDOWN) && (e->button.button == SDL_BUTTON_RIGHT) && (sel))
 	{
 		//SDL_GetMouseState(&mx, &my);
@@ -65,12 +70,21 @@ int ObjetoMovil::event(SDL_Event* e, SDL_Rect m_sel, SDL_Point m)
 
 void ObjetoMovil::render(Camera cam)
 {
-	move();
 	GameObject::render(cam);
 }
 
-void ObjetoMovil::move()
+bool ObjetoMovil::move()
 {
+	if(following)
+	{
+		//Dirección
+	//	cout<<"entro"<<endl;
+		dir.x = dest.x - cen.x;
+		dir.y = dest.y - cen.y;
+		angle = (180 * atan2(dir.y, dir.x) / M_PI);
+	//	cout<<dest.x<<" "<<dest.y<<endl;
+	}
+
 	if ((abs(cen.x - dest.x) > max_vel) || (abs(cen.y - dest.y) > max_vel)) {
 
 		//Ajuste de velocidades
@@ -82,8 +96,46 @@ void ObjetoMovil::move()
 	}
 	else
 	{
+
+		//following=false;
 		vel.x = 0;
 		vel.y = 0;
+	}
+	return 0;
+}
+
+bool ObjetoMovil::turn(int x, int y)
+{
+	
+	int turn_error = 3;
+
+	float a_n = max_vel * max_vel / turn_rad;
+	
+	Vector2 aux(x - cen.x, y - cen.y);
+
+	if (abs(angle - aux.argumento()) < turn_error)
+		return true;
+	else
+	{
+		if (angle - aux.argumento() >= turn_error) //Izquierda
+		{
+			accel.x = -dir.x * a_n;
+			accel.y = dir.y * a_n;
+		}
+		if (angle - aux.argumento() <= turn_error) //derecha
+		{
+			accel.x = dir.x * a_n;
+			accel.y = -dir.y * a_n;
+		}
+
+		//Mover
+		vel.x += accel.x;
+		vel.y += accel.y;
+
+		pos.x += vel.x;
+		pos.y += vel.y;
+		
+		return false;
 	}
 }
 
@@ -99,14 +151,29 @@ bool ObjetoMovil::moveTo(int x, int y)
 {
 	//vel.x = dir.x;
 	//vel.y = dir.y;
-	dest.x=x;
-	dest.y=y;
+	dest.x = x;
+	dest.y = y;
 
 	dir.x = dest.x - cen.x;
 	dir.y = dest.y - cen.y;
 
 	angle = (180 * atan2(dir.y, dir.x) / M_PI);
 	return false;
+}
+
+void ObjetoMovil::follow(Vector2 &destino)
+{
+	dest=destino;
+//	cout<<dest.x<<" "<<dest.y<<endl;
+	following=true;
+}
+
+Vector2& ObjetoMovil::getDest()
+{
+//	cout<<"    "<<endl;
+	following=true;
+	return dest;
+
 }
 
 //Velocidad
@@ -121,6 +188,10 @@ void ObjetoMovil::SetVel(float x, float y)
 	vel.y = y;
 }
 
+void ObjetoMovil::SetMaxVel(float v)
+{
+	max_vel = v;
+}
 //Dirección
 Vector2 ObjetoMovil::GetDir()
 {
